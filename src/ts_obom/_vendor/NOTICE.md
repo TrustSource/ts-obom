@@ -14,7 +14,7 @@ Cloud (Palo Alto Networks) and its contributors.
 - Trimmed and adapted via
   [`jthDEV/checkov`](https://github.com/jthDEV/checkov), branch
   `feature/scan2graph-extraction` (`scan2graph/vendor_src/`), for use by
-  `ts_scan.analyse.obom`.
+  `ts_obom.obom`.
 
 ## What was changed from upstream (Apache-2.0 §4(b))
 
@@ -45,7 +45,7 @@ Cloud (Palo Alto Networks) and its contributors.
 
 ## Why vendored instead of `pip install checkov`
 
-See the module docstring in `ts_scan/analyse/obom.py` for the full
+See the module docstring in `ts_obom/obom.py` for the full
 reasoning: the full `checkov` PyPI distribution's declared dependencies
 conflict with ts-scan's own (`cyclonedx-python-lib`, `packageurl-python`,
 `importlib-metadata`), and none of that weight turned out to be needed for

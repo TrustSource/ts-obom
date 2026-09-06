@@ -1,0 +1,108 @@
+
+# Project
+site_name: TrustSource ts-obom
+site_url: https://trustsource.github.io/ts-obom
+site_description: >-
+  Provides a static site that introduces the TrustSource guide to operating ts-obom
+site_author: TrustSource Team
+# Repository
+repo_url: https://github.com/trustsource/ts-obom
+edit_uri: ""    # prevents the edit button to link into URL
+
+# Copyright
+copyright: Copyright &copy; 2026 <a href="https://www.eacg.de/editorial">EACG GmbH</a>
+
+nav:
+  - Overview:
+    - 'index.md'
+    - Architecture: 'architecture.md'
+  - Installation: 'setup.md'
+  - Usage:
+    - 'usage.md'
+    - Result format: 'format.md'
+    - Operating inside a container: 'container.md'
+  - Security: 'security.md'
+  - About:
+    - 'about.md'
+    - Changelog: 'CHANGELOG.md'
+
+
+theme:
+  name: material
+  palette:
+    # Palette toggle for light mode
+    - scheme: default
+      primary: white
+      accent: teal
+      toggle:
+        icon: material/brightness-4
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - scheme: slate
+      primary: black
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: Switch to light mode
+  font: false # set false, to comply with data privacy (google fonts)
+  logo: assets/TS_logo_lang.png
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.indexes
+    - navigation.sections
+    - navigation.tabs
+    - navigation.top
+    - navigation.tracking
+    - announce.dismiss
+    - content.action.edit
+    - content.action.view
+    - content.code.annotate
+    - content.code.copy
+    - content.tooltips
+    - header.autohide
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+
+extra:
+  homepage: https://www.trustsource.io
+  consent:
+    title: Cookie consent
+    description: >-
+      We use cookies to recognize your repeated visits and preferences, as well as to measure the effectiveness of our documentation and whether users find what they're searching for. With your consent, you're helping us to make our documentation better.
+    cookies:
+      analytics:
+        name: Google Analytics
+        checked: false
+    actions:
+      - accept
+      - manage
+      - reject
+  analytics:
+    provider: google
+    property: G-ZSZXY48Y3G
+  feedback:
+    title: Was this page helpful?
+    ratings:
+      - icon: material/emoticon-happy-outline
+        name: This page was helpful
+        data: 1
+        note: >-
+         Thanks for your feedback!
+      - icon: material/emoticon-sad-outline
+        name: This page could be improved
+        data: 0
+        note: >-
+         Thanks for your feedback! Help us improve this page by
+         using our <a href="https://www.trustsource.io/contact" target="_blank" rel="noopener">feedback form</a>.
+  social:
+    - icon: fontawesome/brands/linkedin
+      link: https://linkedin.com/company/trustsource
+      name: TrustSource @ Linkedin
+    - icon: fontawesome/solid/paper-plane
+      link: mailto:support@trustsource.io
+
+extra_javascript:
+  - assets/feedback.js

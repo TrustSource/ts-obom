@@ -1,0 +1,59 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: OrderDesk backend - fixture for ts-obom tests
+
+Resources:
+  OrdersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: orderdesk-orders
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: OrderNo
+          AttributeType: S
+      KeySchema:
+        - AttributeName: OrderNo
+          KeyType: HASH
+
+  OrderApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: orderdesk-order-api
+      Handler: app.handler
+      Runtime: python3.12
+      CodeUri: src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OrdersTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource: arn:aws:sqs:eu-central-1:123456789012:orderdesk-warehouse
+
+  ReportRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: orderdesk-reports
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: read-report-bucket
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - arn:aws:s3:::orderdesk-reports
+                  - arn:aws:s3:::orderdesk-reports/*
+              - Effect: Deny
+                Action: s3:DeleteObject
+                Resource: arn:aws:s3:::orderdesk-reports/*

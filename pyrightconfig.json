@@ -1,0 +1,22 @@
+{
+    "include": [
+        "src",
+        "tests"
+    ],
+    "exclude": [
+        "**/__pycache__",
+        "src/ts_obom/_vendor",
+        "build",
+        "dist",
+        "tmp"
+    ],
+    "extraPaths": [
+        "src",
+        "src/ts_obom/_vendor"
+    ],
+    "venvPath": ".",
+    "venv": ".venv",
+    "pythonVersion": "3.10",
+    "reportIncompatibleMethodOverride": "error",
+    "typeCheckingMode": "basic"
+}

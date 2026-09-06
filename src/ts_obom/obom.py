@@ -5,6 +5,12 @@ in a scanned target, on top of a trimmed, vendored copy of Checkov's own
 resource graph builder (checkov.cloudformation.graph_manager /
 checkov.terraform.graph_manager).
 
+History: started life as ``ts_scan.analyse.obom`` on ts-scan's ``obom``
+branch (August 2026) and was moved into its own tool, ts-obom, in September
+2026 because an access graph is not part of software composition analysis
+and should not be mixed into ts-scan's SBOM workflow. References to ts-scan
+below describe why the graph builder was vendored in the first place.
+
 This is evidence for real IAM-privilege-based trust boundaries in
 ts-tm-agent's threat modeling: without it, trust zones are inferred from
 SBOM/dependency signals alone. See:
@@ -28,7 +34,7 @@ CVE-scanning/SBOM/reporting/platform-integration machinery (boto3,
 cloudsplaining, detect_secrets, aiohttp, ...) through a handful of *unused*
 import couplings (e.g. cfn_utils.py importing the whole check registry for
 one unrelated default-parameter value). None of it is on the path actually
-exercised by `build_graph_from_source_directory()`. _obom_vendor/checkov/
+exercised by `build_graph_from_source_directory()`. _vendor/checkov/
 is the graph-builder's real, unmodified source (from
 jthDEV/checkov@feature/scan2graph-extraction) plus:
   - the ~25 files that real graph-building genuinely touches (found by
@@ -69,17 +75,17 @@ from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from types import ModuleType
 
-OBOM_INSTALL_HINT = 'Install it with: pip install "ts-scan[obom]"'
+OBOM_INSTALL_HINT = 'Reinstall it with: pip install ts-obom'
 
-_VENDOR_DIR = Path(__file__).parent / '_obom_vendor'
+_VENDOR_DIR = Path(__file__).parent / '_vendor'
 
 _checkov: t.Optional[ModuleType] = None
 
 
 class CheckovNotInstalledError(RuntimeError):
     """Raised when the vendored graph-builder's own (lightweight) third-party
-    dependencies -- bc-python-hcl2, networkx, etc., declared under the
-    ts-scan "obom" extra -- aren't installed. Not about checkov itself: no
+    dependencies -- bc-python-hcl2, networkx, etc., declared as ts-obom's
+    core dependencies -- aren't installed. Not about checkov itself: no
     checkov install is used or needed, the graph-builder is vendored."""
     pass
 
