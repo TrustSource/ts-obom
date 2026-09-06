@@ -78,3 +78,20 @@ def test_result_to_dict_is_json_shaped():
     assert set(doc) == {'edges', 'unresolved'}
     assert all(set(e) == {'principal', 'resource', 'actions', 'effect', 'grantedVia'} for e in doc['edges'])
     assert all(set(u) == {'principal', 'reason', 'detail'} for u in doc['unresolved'])
+
+
+def test_opentofu_files_are_scanned_and_shadow_terraform_files():
+    result = obom.extract_terraform(str(FIXTURES / 'opentofu'))
+
+    actions = {action for edge in result.edges for action in edge.actions}
+    # main.tofu (with an OpenTofu-only state encryption block) parses like Terraform
+    assert {'sqs:ReceiveMessage', 'sqs:DeleteMessage'} <= actions
+    # reports.tofu is used ...
+    assert 's3:GetObject' in actions
+    # ... and shadows reports.tf, whose grant must not appear
+    assert 's3:DeleteBucket' not in actions
+
+    granted_via = {edge.grantedVia for edge in result.edges}
+    assert any('aws_iam_role_policy.importer_queue' in via for via in granted_via)
+    assert any('aws_iam_role_policy.reports_read' in via for via in granted_via)
+    assert not any('reports_legacy' in via for via in granted_via)

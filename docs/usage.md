@@ -28,7 +28,7 @@ Without `-o` the result is printed to standard output.
 Front-end specific options are prefixed with the front-end name, like package manager options in ts-scan:
 
 * `--cloudformation:ignore` - Skip CloudFormation and AWS SAM templates
-* `--terraform:ignore` - Skip Terraform sources
+* `--terraform:ignore` - Skip Terraform and OpenTofu sources (OpenTofu is handled by the `terraform` front-end; the two share the HCL language)
 
 General options:
 
@@ -70,5 +70,5 @@ The prefix deliberately differs from ts-scan's `TS_` so that both tools can be c
 ## What the scan does not do
 
 * It does not call any cloud API. Managed policies referenced by ARN (`arn:aws:iam::aws:policy/...`) are reported under `unresolved` rather than expanded.
-* It does not run `terraform init`. Remote modules are not downloaded; local modules are followed.
+* It does not run `terraform init` or `tofu init`. Remote modules are not downloaded; local modules are followed.
 * It does not evaluate conditions, permission boundaries or SCPs. The graph is the declared intent, not the effective permission.

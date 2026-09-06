@@ -6,7 +6,7 @@
 
 It is the infrastructure counterpart to [ts-scan](https://trustsource.github.io/ts-scan), which builds the Software Bill of Materials. An SBOM tells you what is inside the software; the OBOM tells you what the software is allowed to touch once it runs. Together they give threat modelling and trust-boundary analysis the evidence that neither can provide alone.
 
-***ts-obom*** works entirely offline on CloudFormation, AWS SAM and Terraform sources. It needs no cloud credentials, no Terraform init and no Checkov installation.
+***ts-obom*** works entirely offline on CloudFormation, AWS SAM, Terraform and OpenTofu sources. It needs no cloud credentials, no Terraform init and no Checkov installation.
 
 To get started:
 

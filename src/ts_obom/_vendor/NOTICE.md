@@ -60,3 +60,18 @@ copy needs, re-run the trimming process from `jthDEV/checkov`'s
 `checkov.terraform.graph_manager` from a fresh copy, copy in whatever's
 reported missing, re-verify against `scan2graph/testdata/`) rather than
 hand-patching this copy in place.
+
+## Changes made in ts-obom (2026-09-06)
+
+Beyond the trimming described above, ts-obom carries these edits, each marked
+with a `ts-obom:` comment at the edit site:
+
+- `terraform/tf_parser.py`: `parse_file()` and the directory listing in
+  `_parse_directory()` also accept OpenTofu files (`.tofu`, `.tofu.json`); a
+  `name.tofu` file shadows `name.tf` in the same directory, as OpenTofu 1.8+
+  does.
+- `terraform/graph_builder/utils.py`: `extract_module_dependency_path()`
+  recognises `.tofu`, `.tofu.json`, `.tf.json` and `.hcl` module file names in
+  nested-module paths instead of assuming `.tf`.
+- `terraform/module_loading/module_finder.py`: module discovery also walks
+  `.tofu` files.

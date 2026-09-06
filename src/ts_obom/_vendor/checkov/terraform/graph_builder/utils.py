@@ -54,6 +54,15 @@ def extract_module_dependency_path(module_dependency: str | List[str]) -> List[s
         return ["", ""]
     if isinstance(module_dependency, list):
         module_dependency = module_dependency[0]
+    # ts-obom: the module file may be an OpenTofu (.tofu/.tofu.json) or .tf.json/.hcl file, not only .tf
+    for ext in ('.tofu.json', '.tf.json', '.tofu', '.tf', '.hcl'):
+        marker = f'{ext}{TERRAFORM_NESTED_MODULE_INDEX_SEPARATOR}'
+        if marker in module_dependency:
+            idx = module_dependency.index(marker)
+            return [
+                module_dependency[3:idx + len(ext)],
+                module_dependency[idx + len(marker):-TERRAFORM_NESTED_MODULE_PATH_SEPARATOR_LENGTH]
+            ]
     return [
         module_dependency[3:module_dependency.index(f'.tf{TERRAFORM_NESTED_MODULE_INDEX_SEPARATOR}') + len('.tf')],
         module_dependency[module_dependency.index(f'.tf{TERRAFORM_NESTED_MODULE_INDEX_SEPARATOR}') + len(f'.tf{TERRAFORM_NESTED_MODULE_INDEX_SEPARATOR}'):-TERRAFORM_NESTED_MODULE_PATH_SEPARATOR_LENGTH]

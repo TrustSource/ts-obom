@@ -102,7 +102,8 @@ class TFParser:
         return self.out_definitions
 
     def parse_file(self, file: str, parsing_errors: dict[str, Exception]) -> Optional[Dict[str, Any]]:
-        if file.endswith(".tf") or file.endswith(".tf.json") or file.endswith(".hcl"):
+        # ts-obom: also accept OpenTofu files (.tofu, .tofu.json)
+        if file.endswith((".tf", ".tf.json", ".hcl", ".tofu", ".tofu.json")):
             parse_result = load_or_die_quietly(file, parsing_errors)
             if parse_result:
                 parse_result = serialize_definitions(parse_result)
@@ -577,8 +578,16 @@ class TFParser:
                 hcl_tfvars = file.path
             elif file.name.endswith(".auto.tfvars.json") or file.name.endswith(".auto.tfvars"):
                 auto_vars_files.append(file.path)
-            elif file.name.endswith(".tf") or file.name.endswith('.hcl'):  # TODO: add support for .tf.json
+            elif file.name.endswith((".tf", ".hcl", ".tofu")):  # TODO: add support for .tf.json  # ts-obom: + OpenTofu .tofu
                 tf_files_to_load.append(file.path)
+
+        # ts-obom: OpenTofu precedence rule -- "name.tofu" shadows "name.tf" in the same directory
+        tofu_stems = {os.path.basename(p)[:-len(".tofu")] for p in tf_files_to_load if p.endswith(".tofu")}
+        if tofu_stems:
+            tf_files_to_load = [
+                p for p in tf_files_to_load
+                if not (p.endswith(".tf") and os.path.basename(p)[:-len(".tf")] in tofu_stems)
+            ]
 
         # Terraform Variable Definition Precedence
         # 1. Environment vars

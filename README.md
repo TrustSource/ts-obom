@@ -2,7 +2,7 @@
 
 # TrustSource OBOM Scanner
 
-The **ts-obom** scanner extracts an **Ownership Bill of Materials (OBOM)** from infrastructure-as-code: a graph of *who may do what to which resource*, derived from the IAM roles, policies and policy attachments declared in CloudFormation, AWS SAM and Terraform sources. It is the infrastructure counterpart to [ts-scan](https://github.com/trustsource/ts-scan), which produces the Software Bill of Materials (SBOM) of the code.
+The **ts-obom** scanner extracts an **Ownership Bill of Materials (OBOM)** from infrastructure-as-code: a graph of *who may do what to which resource*, derived from the IAM roles, policies and policy attachments declared in CloudFormation, AWS SAM, Terraform and OpenTofu sources. It is the infrastructure counterpart to [ts-scan](https://github.com/trustsource/ts-scan), which produces the Software Bill of Materials (SBOM) of the code.
 
 Where an SBOM answers *what is in the software*, an OBOM answers *which identities the software runs as and what they are allowed to touch*. That is the evidence trust-boundary and threat-modelling work needs and which SBOM signals alone cannot provide.
 
@@ -18,7 +18,7 @@ Supported IaC front-ends:
 | Front-end | Sources | What is extracted |
 |-----------|---------|-------------------|
 | `cloudformation` | CloudFormation and AWS SAM templates (`.yaml`, `.yml`, `.json`) | `AWS::IAM::Role` inline policies, `AWS::Serverless::Function` policies including the common SAM policy templates (`DynamoDBCrudPolicy`, `S3ReadPolicy`, ...) |
-| `terraform` | Terraform (`.tf`) | `aws_iam_role_policy` / `aws_iam_user_policy` / `aws_iam_group_policy` inline documents, `*_policy_attachment` resources, resolved to the compute resource assuming the role where possible |
+| `terraform` | Terraform and OpenTofu (`.tf`, `.tf.json`, `.tofu`, `.tofu.json`; a `.tofu` file shadows a `.tf` file of the same name, as in OpenTofu) | `aws_iam_role_policy` / `aws_iam_user_policy` / `aws_iam_group_policy` inline documents, `*_policy_attachment` resources, resolved to the compute resource assuming the role where possible |
 
 The graph is built with a trimmed, vendored subset of [Checkov](https://github.com/bridgecrewio/checkov)'s resource graph builder; see [`src/ts_obom/_vendor/NOTICE.md`](src/ts_obom/_vendor/NOTICE.md) for provenance and changes. No Checkov installation and no cloud credentials are required; the scan is fully offline.
 
@@ -66,7 +66,7 @@ The `-f <output format>` option controls the output format and can be:
 ### Options
 
 * `--cloudformation:ignore` - Skip CloudFormation and SAM templates
-* `--terraform:ignore` - Skip Terraform sources
+* `--terraform:ignore` - Skip Terraform and OpenTofu sources
 * `--tag <TAG>` - Stores the SCM tag `<TAG>` in the result
 * `--branch <BRANCH>` - Stores the SCM branch `<BRANCH>` in the result
 * `--verbose` - Enables verbose mode

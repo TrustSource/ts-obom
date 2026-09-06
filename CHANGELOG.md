@@ -7,7 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ### New Features
     * Initial release as a standalone tool, extracted from the `obom` branch of ts-scan
-    * `ts-obom scan` extracts IAM access grants from CloudFormation / AWS SAM templates and Terraform sources into the TrustSource OBOM JSON format
+    * `ts-obom scan` extracts IAM access grants from CloudFormation / AWS SAM templates and Terraform / OpenTofu sources into the TrustSource OBOM JSON format
+    * OpenTofu `.tofu` and `.tofu.json` files are scanned by the `terraform` front-end, honouring OpenTofu's rule that a `.tofu` file shadows a `.tf` file of the same name
     * `-f dot` renders the access graph as a Graphviz digraph
     * `--cloudformation:ignore` and `--terraform:ignore` switch individual IaC front-ends off, following ts-scan's option conventions
     * Profile-based config file (`~/.ts-obom/config`), `tsproject.toml` project defaults and `TS_OBOM_` environment variables

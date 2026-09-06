@@ -18,9 +18,11 @@ sources ──► graph builder (vendored checkov) ──► vertices/edges ─�
 | Front-end | Covered | Not covered yet |
 |-----------|---------|-----------------|
 | CloudFormation / SAM | Role inline policies, SAM function `Policies` (inline statements and the known policy templates) | `AWS::IAM::Policy` / `ManagedPolicy` resources, users and groups, resource based policies (bucket policies, queue policies) |
-| Terraform | `aws_iam_role_policy`, `aws_iam_user_policy`, `aws_iam_group_policy`, the three `*_policy_attachment` resources, role resolution to Lambda, ECS, EC2 and Batch | `aws_iam_policy` documents referenced by attachment, `data.aws_iam_policy_document`, non-AWS providers |
+| Terraform / OpenTofu | `aws_iam_role_policy`, `aws_iam_user_policy`, `aws_iam_group_policy`, the three `*_policy_attachment` resources, role resolution to Lambda, ECS, EC2 and Batch; `.tf`, `.tf.json`, `.tofu` and `.tofu.json` files with OpenTofu's precedence rule | `aws_iam_policy` documents referenced by attachment, `data.aws_iam_policy_document`, non-AWS providers |
 
 Everything in the right column ends up in `unresolved` when it is referenced, and is the natural backlog.
+
+OpenTofu is not a separate front-end. It is a fork of Terraform 1.5 with the same HCL language, provider blocks and resource types, and the scanner never executes either binary, so the `terraform` front-end covers both. The only OpenTofu-specific behaviour that matters for a file based scan is the `.tofu` extension introduced in OpenTofu 1.8, including its rule that `name.tofu` shadows `name.tf`; both are implemented in the vendored parser (see ADR-005). OpenTofu-only blocks such as state `encryption` are parsed as ordinary HCL and ignored.
 
 ## Architecture Decision Records
 
@@ -55,6 +57,14 @@ Everything in the right column ends up in `unresolved` when it is referenced, an
 **Decision.** Use `TS_OBOM_` as the prefix.
 
 **Consequences.** Both tools can be configured in the same CI job without interference, at the cost of one small deviation from ts-scan's conventions, documented in the usage guide.
+
+### ADR-005 - Support OpenTofu through the Terraform front-end, with a minimal vendored-parser edit (2026-09-06, 0.1.0)
+
+**Context.** OpenTofu projects are Terraform projects to a file based scanner, except that OpenTofu 1.8 introduced `.tofu` / `.tofu.json` files that shadow `.tf` files of the same name. Checkov's parser only collects `.tf`, `.tf.json` and `.hcl`, so `.tofu` files were silently skipped.
+
+**Decision.** Keep one `terraform` front-end for both tools. Extend the vendored parser's file selection by the two OpenTofu extensions and implement the shadowing rule there; generalise the nested-module path helper that assumed a `.tf` suffix. Every edited line is marked with a `ts-obom:` comment and listed in `NOTICE.md`.
+
+**Consequences.** OpenTofu code bases scan without any flag or conversion. The vendored copy now carries deliberate, documented edits in three files beyond the trimming, which must be re-applied when re-syncing with upstream Checkov.
 
 ## Further development
 
