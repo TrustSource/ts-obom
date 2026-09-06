@@ -18,7 +18,7 @@ sources ──► graph builder (vendored checkov) ──► vertices/edges ─�
 | Front-end | Covered | Not covered yet |
 |-----------|---------|-----------------|
 | CloudFormation / SAM | Role inline policies, SAM function `Policies` (inline statements and the known policy templates) | `AWS::IAM::Policy` / `ManagedPolicy` resources, users and groups, resource based policies (bucket policies, queue policies) |
-| Terraform / OpenTofu | `aws_iam_role_policy`, `aws_iam_user_policy`, `aws_iam_group_policy`, the three `*_policy_attachment` resources, role resolution to Lambda, ECS, EC2 and Batch; `.tf`, `.tf.json`, `.tofu` and `.tofu.json` files with OpenTofu's precedence rule | `aws_iam_policy` documents referenced by attachment, `data.aws_iam_policy_document`, non-AWS providers |
+| Terraform / OpenTofu | `aws_iam_role_policy`, `aws_iam_user_policy`, `aws_iam_group_policy`, the three `*_policy_attachment` resources, role resolution to the compute resource through a `role` attribute (Lambda, EC2 instance profiles); `.tf`, `.tf.json`, `.tofu` and `.tofu.json` files with OpenTofu's precedence rule | `aws_iam_policy` documents referenced by attachment, `data.aws_iam_policy_document`, role resolution through `task_role_arn` / `execution_role_arn` (ECS) and `job_role_arn` (Batch), non-AWS providers |
 
 Everything in the right column ends up in `unresolved` when it is referenced, and is the natural backlog.
 
@@ -68,4 +68,10 @@ OpenTofu is not a separate front-end. It is a fork of Terraform 1.5 with the sam
 
 ## Further development
 
-Planned next steps, in rough order: upload of OBOM results to the TrustSource platform once the API endpoint exists; `AWS::IAM::Policy` and `aws_iam_policy` documents; resource based policies; a Kubernetes RBAC front-end.
+Backlog, in rough order:
+
+1. **Principal resolution for ECS and Batch (Terraform).** The role-to-principal resolution only follows the attributes `role`, `user` and `group`. `aws_ecs_task_definition` references its role through `task_role_arn` / `execution_role_arn`, `aws_batch_job_definition` through `job_role_arn`, so their grants are currently attributed to the IAM role instead of the task or job definition (visible in the `opentofu` test fixture). Extend `TF_PRINCIPAL_ATTRS` handling to these attributes and add both resource types to the fixtures.
+2. Upload of OBOM results to the TrustSource platform once the API endpoint exists.
+3. `AWS::IAM::Policy` / `AWS::IAM::ManagedPolicy` resources and Terraform `aws_iam_policy` documents referenced by attachments.
+4. Resource based policies (bucket, queue and topic policies).
+5. A Kubernetes RBAC front-end.
