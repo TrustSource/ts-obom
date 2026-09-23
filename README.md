@@ -117,11 +117,11 @@ The exact `principal`, `resource` and `grantedVia` strings depend on the front-e
 The platform stores OBOMs as CycloneDX, so a transfer is a scan in that format followed by an upload:
 
 ```shell
-ts-obom scan -f cyclonedx -o obom.cdx.json ./backend
-ts-obom upload --api-key "$TS_API_KEY" --project-name Orderdesk --module-name backend obom.cdx.json
+ts-obom scan -f cyclonedx -o obom.cdx.json .
+ts-obom upload --api-key "$TS_API_KEY" --project-name Orderdesk obom.cdx.json
 ```
 
-Name the **same module** the dependency scan uses, so the OBOM lands on the module its SBOM is on. Without a module option the OBOM is stored for the project as a whole. The `obom` feature has to be enabled for the company; the key travels as the `x-api-key` header, and `--base-url` carries the API version (default `https://api.trustsource.io/v2`).
+Scan the **project root** and upload at **project scope**: the front-ends recurse, so one run covers the whole project, and that is where an OBOM belongs. A module is something that produces a deployment artefact, which infrastructure does not divide into -- a queue or a table belongs to no artefact. `--module-name` exists for the case where the scanned sources really are one module's own infrastructure. The `obom` feature has to be enabled for the company; the key travels as the `x-api-key` header, and `--base-url` carries the API version (default `https://api.trustsource.io/v2`).
 
 Uploading a file written with `-f ts` is refused locally -- the API would only reject it -- with a pointer to `-f cyclonedx`.
 
