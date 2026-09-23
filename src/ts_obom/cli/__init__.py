@@ -16,6 +16,7 @@ msg = Printer(line_max=240, colors={'info': 'cyan'})
 
 def start():
     import ts_obom.cli.scan
+    import ts_obom.cli.upload
 
     cli()
 
@@ -23,6 +24,7 @@ def start():
 class CLI(click.Group):
     frontend_options: t.Callable[..., t.Any]
     inout_default_options: t.Callable[..., t.Any]
+    api_default_options: t.Callable[..., t.Any]
 
     def invoke(self, ctx):
         ctx.obj = {
@@ -102,8 +104,34 @@ def frontend_options(f):
     return f
 
 
-def inout_default_options(_out: bool, _fmt: bool):
+def api_default_options(project_name=True, is_project_name_required=True):
+    """Adds the TrustSource API options, same names and defaults as ts-scan's.
+
+    The base URL carries the API version (``/v2``): the version belongs in one
+    place, not repeated in every method path.
+    """
     def _apply(f):
+        if project_name:
+            f = click.option('--project-name', 'project_name', type=str,
+                             required=is_project_name_required,
+                             help='Project name the OBOM belongs to')(f)
+
+        f = click.option('--api-key', 'api_key', type=str, required=True,
+                         help='TrustSource API Key')(f)
+
+        f = click.option('--base-url', 'base_url', default='https://api.trustsource.io/v2',
+                         show_default=True,
+                         help='TrustSource API base URL, including the API version')(f)
+        return f
+
+    return _apply
+
+
+def inout_default_options(_in: bool, _out: bool, _fmt: bool):
+    def _apply(f):
+        if _in:
+            f = click.argument('path',
+                               type=click.Path(exists=True, path_type=Path))(f)
         if _out:
             f = click.option('-o', '--output', 'output_path',
                              type=click.Path(path_type=Path),
@@ -121,9 +149,11 @@ def inout_default_options(_out: bool, _fmt: bool):
 
 cli.frontend_options = frontend_options
 cli.inout_default_options = inout_default_options
+cli.api_default_options = api_default_options
 
 scan_formats = [
     'ts',
+    'cyclonedx',
     'dot',
 ]
 

@@ -75,3 +75,42 @@ with a `ts-obom:` comment at the edit site:
   nested-module paths instead of assuming `.tf`.
 - `terraform/module_loading/module_finder.py`: module discovery also walks
   `.tofu` files.
+
+## Changes made in ts-obom (2026-09-22)
+
+The CycloneDX exporter was brought in from the same fork so that ts-obom's
+Operations BOM is built by checkov's own code rather than by a re-implementation
+of it. Five modules that the trimming had replaced with stubs were restored to
+their real upstream source for this, and two were added:
+
+- **Restored from stubs to the real upstream files:**
+  `common/bridgecrew/severities.py`, `common/bridgecrew/check_type.py`,
+  `common/sca/commons.py`, `common/output/common.py`, `common/output/record.py`.
+  Each had been a stub package directory; it is now the upstream module of the
+  same name.
+- **Added from upstream:** `common/output/cyclonedx.py`,
+  `common/output/cyclonedx_consts.py`.
+- **Two line-level edits**, both marked with a `ts-obom:` comment at the edit
+  site:
+  - `common/output/cyclonedx.py` and `common/output/cyclonedx_consts.py` import
+    `CheckType` from `common/bridgecrew/check_type.py` instead of from
+    `common/output/report.py`, which merely re-exports it. `report.py` stays a
+    stub that way, and with it its dependencies (`junit_xml`, `tabulate`,
+    `termcolor`'s report use) stay out of ts-obom.
+  - `common/output/cyclonedx_consts.py`: `DEFAULT_CYCLONE_SCHEMA_VERSION` raised
+    from CycloneDX 1.4 to 1.6, and 1.5/1.6 added to `CYCLONE_SCHEMA_VERSION`.
+    1.6 is the version TrustSource's OBOM API is specified against, and the
+    component types an Operations BOM needs (`platform`, `data`) were only
+    introduced in 1.5.
+
+`checkov.common.output.report.Report` itself is **not** vendored. The exporter
+reads five attributes off a report (`check_type`, `passed_checks`,
+`skipped_checks`, `failed_checks`, `extra_resources`) and ts-obom hands it a
+small stand-in carrying those (`ts_obom.cyclonedx._InventoryReport`), so
+checkov's whole reporting subsystem stays out of the package.
+
+This adds `cyclonedx-python-lib`, `packageurl-python` and `termcolor` to
+ts-obom's dependencies. The conflict that motivated the vendoring in the first
+place was with ts-scan's pins, and ts-obom has been a separate package since
+0.1.0 (see ADR-001), so those two libraries are no longer a problem to depend
+on.

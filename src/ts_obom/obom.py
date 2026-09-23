@@ -1,9 +1,14 @@
 """
-OBOM (Ownership Bill of Materials) -- extracts a generic access graph
-{principal, resource, actions[], effect, grantedVia} from IaC sources found
-in a scanned target, on top of a trimmed, vendored copy of Checkov's own
-resource graph builder (checkov.cloudformation.graph_manager /
-checkov.terraform.graph_manager).
+OBOM (Operations Bill of Materials) -- extracts the inventory of resources
+declared in the IaC sources found in a scanned target, plus a generic access
+graph over them ({principal, resource, actions[], effect, grantedVia}), on top
+of a trimmed, vendored copy of Checkov's own resource graph builder
+(checkov.cloudformation.graph_manager / checkov.terraform.graph_manager).
+
+``ts_obom.cyclonedx`` renders a result of this module as the CycloneDX document
+the TrustSource OBOM API accepts; up to 0.1.0 this module's output *was* the
+result, and was described as an "Ownership" BOM. See ADR-006 in
+docs/architecture.md for why that framing was wrong.
 
 History: started life as ``ts_scan.analyse.obom`` on ts-scan's ``obom``
 branch (August 2026) and was moved into its own tool, ts-obom, in September
@@ -215,6 +220,19 @@ def _as_list(value: t.Any) -> t.List[t.Any]:
 
 
 @dataclass
+class ObomResource:
+    """One resource declared in the scanned IaC sources -- the inventory an
+    Operations BOM is made of. ``id`` is the graph vertex id and is what an
+    edge's ``principal`` refers to, so the two lists can be joined."""
+    id: str
+    name: str
+    resourceType: str
+    frontend: str
+    filePath: str
+    fileAbsPath: str
+
+
+@dataclass
 class ObomEdge:
     principal: str
     resource: str
@@ -232,16 +250,19 @@ class ObomUnresolved:
 
 @dataclass
 class ObomResult:
+    resources: t.List[ObomResource] = field(default_factory=list)
     edges: t.List[ObomEdge] = field(default_factory=list)
     unresolved: t.List[ObomUnresolved] = field(default_factory=list)
 
     def to_dict(self) -> t.Dict[str, t.Any]:
         return {
+            'resources': [asdict(r) for r in self.resources],
             'edges': [asdict(e) for e in self.edges],
             'unresolved': [asdict(u) for u in self.unresolved],
         }
 
     def extend(self, other: 'ObomResult') -> None:
+        self.resources.extend(other.resources)
         self.edges.extend(other.edges)
         self.unresolved.extend(other.unresolved)
 
@@ -340,6 +361,48 @@ def _extract_sam_function(vertex: t.Any, result: ObomResult) -> None:
             )
 
 
+# Checkov's graph carries more than resources: provider, variable, terraform,
+# data and module blocks all become vertices too. Only resource blocks are
+# inventory, and the block type spelling is the same for both front-ends.
+_RESOURCE_BLOCK_TYPE = 'resource'
+
+
+def _collect_resources(
+    local_graph: t.Any,
+    source_dir: str,
+    frontend: str,
+    resource_type_of: t.Callable[[t.Any], t.Optional[str]],
+) -> t.List[ObomResource]:
+    """Every declared resource, in graph order. This is the Operations BOM's
+    inventory; the access grants extracted below are an enrichment of it, not a
+    replacement -- a resource nobody was granted anything on still belongs in
+    the document."""
+    base = Path(source_dir).resolve()
+    resources: t.List[ObomResource] = []
+
+    for vertex in local_graph.vertices:
+        if vertex.block_type != _RESOURCE_BLOCK_TYPE:
+            continue
+        abs_path = str(Path(vertex.path).resolve())
+        try:
+            file_path = str(Path(abs_path).relative_to(base))
+        except ValueError:
+            # A local module outside the scanned directory -- keep the absolute
+            # path rather than inventing a ../.. relative one.
+            file_path = abs_path
+        resources.append(
+            ObomResource(
+                id=vertex.id,
+                name=vertex.name,
+                resourceType=resource_type_of(vertex) or '',
+                frontend=frontend,
+                filePath=file_path,
+                fileAbsPath=abs_path,
+            )
+        )
+    return resources
+
+
 def extract_cloudformation(source_dir: str) -> ObomResult:
     require_checkov()
     from checkov.cloudformation.graph_manager import CloudformationGraphManager
@@ -350,7 +413,12 @@ def extract_cloudformation(source_dir: str) -> ObomResult:
     graph_manager = CloudformationGraphManager(db_connector=NetworkxConnector())
     local_graph, _ = graph_manager.build_graph_from_source_directory(source_dir)
 
-    result = ObomResult()
+    result = ObomResult(
+        resources=_collect_resources(
+            local_graph, source_dir, 'cloudformation',
+            lambda v: v.attributes.get('resource_type'),
+        )
+    )
     for vertex in local_graph.vertices:
         resource_type = vertex.attributes.get('resource_type')
         if resource_type == 'AWS::IAM::Role':
@@ -506,7 +574,11 @@ def extract_terraform(source_dir: str) -> ObomResult:
     local_graph, _ = graph_manager.build_graph_from_source_directory(source_dir)
     by_origin, by_dest = _index_edges(local_graph)
 
-    result = ObomResult()
+    result = ObomResult(
+        resources=_collect_resources(
+            local_graph, source_dir, 'terraform', _tf_resource_type,
+        )
+    )
     for i, vertex in enumerate(local_graph.vertices):
         resource_type = _tf_resource_type(vertex)
         if resource_type in TF_POLICY_RESOURCE_TYPES:
