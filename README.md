@@ -2,15 +2,16 @@
 
 # TrustSource OBOM Scanner
 
-The **ts-obom** scanner extracts an **Ownership Bill of Materials (OBOM)** from infrastructure-as-code: a graph of *who may do what to which resource*, derived from the IAM roles, policies and policy attachments declared in CloudFormation, AWS SAM, Terraform and OpenTofu sources. It is the infrastructure counterpart to [ts-scan](https://github.com/trustsource/ts-scan), which produces the Software Bill of Materials (SBOM) of the code.
+The **ts-obom** scanner extracts an **Operations Bill of Materials (OBOM)** from infrastructure-as-code: the resources a module is deployed as -- functions, tables, buckets, queues, task definitions -- together with the IAM grants that say which of them may do what to which other. It reads CloudFormation, AWS SAM, Terraform and OpenTofu sources and writes a CycloneDX document that the TrustSource platform stores. It is the infrastructure counterpart to [ts-scan](https://github.com/trustsource/ts-scan), which produces the Software Bill of Materials (SBOM) of the code.
 
-Where an SBOM answers *what is in the software*, an OBOM answers *which identities the software runs as and what they are allowed to touch*. That is the evidence trust-boundary and threat-modelling work needs and which SBOM signals alone cannot provide.
+Where an SBOM answers *what is in the software*, an OBOM answers *what the software is operated as, and what it is allowed to touch once it runs*. That is the evidence trust-boundary and threat-modelling work needs and which SBOM signals alone cannot provide.
 
 ## Description
 
 **ts-obom** scans a directory for IaC sources and emits, per scanned directory, a document with
 
-* `edges` - access grants `{principal, resource, actions[], effect, grantedVia}`, for example the role of a Lambda function that may `s3:GetObject` on a bucket ARN, with the policy or SAM policy template that granted it
+* `resources` - every resource declared in the sources, with its type and the file it comes from. In the CycloneDX output these are the components
+* `edges` - access grants `{principal, resource, actions[], effect, grantedVia}`, for example the role of a Lambda function that may `s3:GetObject` on a bucket ARN, with the policy or SAM policy template that granted it. In the CycloneDX output these are component properties and `dependencies` edges
 * `unresolved` - grants the scanner saw but could not expand, for example managed policy ARNs that would need AWS API access to resolve
 
 Supported IaC front-ends:
@@ -60,8 +61,9 @@ ts-obom scan -o <path to the output file> [-f <output format>] <path to one or m
 
 The `-f <output format>` option controls the output format and can be:
 
-* `ts` - the TrustSource OBOM JSON format (default), one document per scanned directory
-* `dot` - a Graphviz digraph for visualisation, for example `ts-obom scan -f dot infra | dot -Tsvg -o obom.svg`
+* `ts` - the scanner's own JSON format (default), one document per scanned directory
+* `cyclonedx` - a CycloneDX 1.6 Operations BOM, the format the TrustSource platform stores
+* `dot` - a Graphviz digraph of the access graph, for example `ts-obom scan -f dot infra | dot -Tsvg -o obom.svg`
 
 ### Options
 
@@ -93,7 +95,7 @@ produces a document like
     "module": "backend",
     "moduleId": "obom:backend",
     "source": "/work/orderdesk/backend",
-    "tool": { "name": "ts-obom", "version": "0.1.0", "frontends": ["cloudformation", "terraform"], "generatedAt": "2026-09-06T12:00:00+00:00" },
+    "tool": { "name": "ts-obom", "version": "0.2.0", "frontends": ["cloudformation", "terraform"], "generatedAt": "2026-09-22T12:00:00+00:00" },
     "edges": [
       {
         "principal": "AWS::Serverless::Function.OrderApiFunction",
@@ -109,6 +111,19 @@ produces a document like
 ```
 
 The exact `principal`, `resource` and `grantedVia` strings depend on the front-end; the [format documentation](https://trustsource.github.io/ts-obom/format) describes them.
+
+## Upload to TrustSource
+
+The platform stores OBOMs as CycloneDX, so a transfer is a scan in that format followed by an upload:
+
+```shell
+ts-obom scan -f cyclonedx -o obom.cdx.json ./backend
+ts-obom upload --api-key "$TS_API_KEY" --project-name Orderdesk --module-name backend obom.cdx.json
+```
+
+Name the **same module** the dependency scan uses, so the OBOM lands on the module its SBOM is on. Without a module option the OBOM is stored for the project as a whole. The `obom` feature has to be enabled for the company; the key travels as the `x-api-key` header, and `--base-url` carries the API version (default `https://api.trustsource.io/v2`).
+
+Uploading a file written with `-f ts` is refused locally -- the API would only reject it -- with a pointer to `-f cyclonedx`.
 
 ## User Settings
 
@@ -127,7 +142,7 @@ Select a profile with `ts-obom -p ci scan ...` and a different file with `ts-obo
 
 ## Relationship to ts-scan
 
-**ts-scan** and **ts-obom** are deliberately separate tools. Software composition (SBOM) and access rights (OBOM) are different questions with different consumers, and mixing them into one command set would blur what each result means. Both share the same conventions, packaging and release process, and the OBOM document header (`module`, `moduleId`, `source`, `tag`, `branch`) mirrors ts-scan's scan header so that results can be correlated per module.
+**ts-scan** and **ts-obom** are deliberately separate tools. Software composition (SBOM) and operational deployment (OBOM) are different questions with different consumers, and mixing them into one command set would blur what each result means. Both share the same conventions, packaging and release process, and the OBOM document header (`module`, `moduleId`, `source`, `tag`, `branch`) mirrors ts-scan's scan header so that results can be correlated per module.
 
 ## License
 

@@ -12,11 +12,12 @@ from pathlib import Path
 
 from . import cli, msg
 from .. import do_scan, ObomScan
+from ..cyclonedx import to_json as to_cyclonedx
 from ..obom import CheckovNotInstalledError
 
 
-@cli.command('scan', help='Scans a target for infrastructure-as-code and extracts its OBOM (IAM access graph)')
-@cli.inout_default_options(_out=True, _fmt=True)
+@cli.command('scan', help='Scans a target for infrastructure-as-code and extracts its OBOM')
+@cli.inout_default_options(_in=False, _out=True, _fmt=True)
 @cli.frontend_options
 @click.option('--verbose', default=False, is_flag=True,
               help="Verbose mode")
@@ -62,6 +63,17 @@ def output_scans(scans: t.List[ObomScan], path: t.Optional[Path], fmt: str = 'ts
 def dump_scans(scans: t.List[ObomScan], fp: t.TextIO, fmt: str):
     if fmt == 'ts':
         json.dump([s.to_dict() for s in scans], fp, indent=2)
+
+    elif fmt == 'cyclonedx':
+        # A CycloneDX document describes exactly one subject, and the platform
+        # stores exactly one per project or module scope -- so there is no
+        # meaningful way to put two scanned directories into one file. Scanning
+        # them one at a time is also how they are uploaded.
+        if len(scans) != 1:
+            msg.fail('The cyclonedx format writes one document and needs exactly one source '
+                     f'directory, but {len(scans)} were scanned. Scan them one at a time.')
+            exit(2)
+        fp.write(to_cyclonedx(scans[0]))
 
     elif fmt == 'dot':
         fp.write(to_dot(scans))

@@ -6,15 +6,15 @@ build-backend = 'setuptools.build_meta'
 
 [project]
 name = 'ts-obom'
-version = '0.1.0'
+version = '0.2.0'
 authors = [
     { name='EACG GmbH' }
 ]
-description = 'TrustSource OBOM scanner: extracts an IAM access graph (Ownership Bill of Materials) from infrastructure-as-code'
+description = 'TrustSource OBOM scanner: extracts a CycloneDX Operations Bill of Materials from infrastructure-as-code'
 readme = 'README.md'
 requires-python = '>=3.10'
 classifiers = []
-keywords = ['obom', 'iam', 'access graph', 'infrastructure as code', 'cloudformation', 'terraform', 'compliance', 'TrustSource']
+keywords = ['obom', 'cyclonedx', 'iam', 'access graph', 'infrastructure as code', 'cloudformation', 'terraform', 'opentofu', 'compliance', 'TrustSource']
 license = 'Apache-2.0'
 
 dependencies = [
@@ -25,6 +25,11 @@ dependencies = [
     # src/ts_obom/_vendor/checkov/. This is NOT the checkov PyPI package,
     # see src/ts_obom/obom.py and src/ts_obom/_vendor/NOTICE.md.
     "bc-python-hcl2>=0.4",
+    # CycloneDX output: used by the vendored checkov exporter and by
+    # ts_obom.cyclonedx on top of it.
+    "cyclonedx-python-lib>=7.6,<8",
+    "packageurl-python>=0.11",
+    "termcolor>=2.0",
     "bc-jsonpath-ng>=1.6",
     "networkx>=2.6",
     "dpath>=2.1",

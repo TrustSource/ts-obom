@@ -2,9 +2,9 @@
 
 # Overview
 
-***ts-obom*** extracts an **Ownership Bill of Materials (OBOM)** from infrastructure-as-code. The OBOM is an access graph: which identity (a Lambda function's role, a task definition's role, an IAM user or group) may perform which actions on which resource, and through which policy that grant was made.
+***ts-obom*** extracts an **Operations Bill of Materials (OBOM)** from infrastructure-as-code and writes it as a CycloneDX document. The OBOM lists the resources a module is deployed as -- functions, tables, buckets, queues, task definitions -- and, on top of that inventory, the access graph: which identity may perform which actions on which resource, and through which policy that grant was made.
 
-It is the infrastructure counterpart to [ts-scan](https://trustsource.github.io/ts-scan), which builds the Software Bill of Materials. An SBOM tells you what is inside the software; the OBOM tells you what the software is allowed to touch once it runs. Together they give threat modelling and trust-boundary analysis the evidence that neither can provide alone.
+It is the infrastructure counterpart to [ts-scan](https://trustsource.github.io/ts-scan), which builds the Software Bill of Materials. An SBOM tells you what is inside the software; the OBOM tells you what it is operated as and what it is allowed to touch once it runs. Together they give threat modelling and trust-boundary analysis the evidence that neither can provide alone.
 
 ***ts-obom*** works entirely offline on CloudFormation, AWS SAM, Terraform and OpenTofu sources. It needs no cloud credentials, no Terraform init and no Checkov installation.
 

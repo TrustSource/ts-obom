@@ -75,7 +75,7 @@ def test_result_to_dict_is_json_shaped():
     result = obom.extract_terraform(str(FIXTURES / 'terraform'))
     doc = result.to_dict()
 
-    assert set(doc) == {'edges', 'unresolved'}
+    assert set(doc) == {'resources', 'edges', 'unresolved'}
     assert all(set(e) == {'principal', 'resource', 'actions', 'effect', 'grantedVia'} for e in doc['edges'])
     assert all(set(u) == {'principal', 'reason', 'detail'} for u in doc['unresolved'])
 

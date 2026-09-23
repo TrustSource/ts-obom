@@ -114,11 +114,11 @@ def do_scan(paths: t.Iterable[Path], **kwargs: t.Any) -> t.Iterable[ObomScan]:
         for name in frontends:
             result.extend(FRONTENDS[name](str(source_dir)))
 
-        if result.edges or result.unresolved:
-            msg.good(f'OBOM extraction done: {len(result.edges)} edges, '
-                     f'{len(result.unresolved)} unresolved.')
+        if result.resources:
+            msg.good(f'OBOM extraction done: {len(result.resources)} resources, '
+                     f'{len(result.edges)} grants, {len(result.unresolved)} unresolved.')
         else:
-            msg.info('OBOM extraction found no IaC-derived IAM grants.')
+            msg.info('OBOM extraction found no IaC resources.')
 
         yield ObomScan(source_dir, result,
                        tag=kwargs.get('tag'), branch=kwargs.get('branch'),
