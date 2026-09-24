@@ -50,11 +50,13 @@ jobs:
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
-          # Repository secret, not the organisation's FRED4TS2DH that ts-scan,
-          # ts-deepscan and ts-legalcheck use: that token is scoped to the
-          # repositories it was created for, and a newly added one is not among
-          # them -- the push failed with insufficient_scope. Scoping a token to
-          # this repository keeps the other three untouched.
+          # Repository secret, where ts-scan, ts-deepscan and ts-legalcheck use
+          # the organisation's FRED4TS2DH. Either works: the first release
+          # failed with insufficient_scope not because of the token but because
+          # a newly created Docker Hub repository does not inherit the team
+          # grant that gives the account write access -- the team has to be
+          # authorized on the repository itself. Both tokens were denied push
+          # before that was set and both are granted it since.
           password: ${{ secrets.DOCKER_ACCESS }}
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
