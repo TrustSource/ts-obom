@@ -82,3 +82,8 @@ jobs:
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
+          # The workflow_dispatch above exists to re-run a release that failed
+          # halfway -- a Docker push that could not authorize, say. Without
+          # this, that re-run always fails on PyPI instead, because the version
+          # is already there and PyPI never accepts the same one twice.
+          skip-existing: true
