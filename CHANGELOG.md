@@ -3,6 +3,34 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-09-24
+
+### New Features
+    * `--deployment <NAME>` names the deployment an OBOM describes -- an environment (`DEV`, `PRD`)
+      or a customer setup (`kunde1`) -- so several deployments of one project can be held side by
+      side and compared. The name is a property of the document
+      (`trustsource:obom:deployment`), not an upload parameter, so what the CLI was given is what
+      the document says (ADR-009)
+    * `--terraform:var-file <FILE>` applies a `.tfvars` file on top of the variable defaults, the
+      way `terraform -var-file` does, so a named deployment actually describes that deployment's
+      values instead of the sources' defaults
+    * Every result records `parameterSource`, never omitted: `defaults`, or `<front-end>=<file>`
+      per active front-end. Two documents that both say `defaults` are byte-identical whatever
+      they are named, and a reader can now see that instead of concluding "no drift"
+    * The CycloneDX document declares `metadata.lifecycles: [{phase: operations}]` -- CycloneDX's
+      own way of saying this is an Operations BOM, next to the TrustSource marker
+
+### Improvements
+    * Naming a deployment without supplying parameter values is warned about twice: when the scan
+      produces such a document, and again when `ts-obom upload` is about to send it
+    * `ts-obom upload` names the deployment it is transferring, read back out of the document
+      rather than taken as an option, so the two cannot contradict each other
+
+### Known limitations
+    * CloudFormation cannot take parameter values yet -- checkov's parser accepts no external
+      parameter file, so a CloudFormation scan always records `parameterSource=defaults`. Support
+      for TrustSource's own `[{ParameterKey, ParameterValue}]` files is the next step (ADR-009)
+
 ## [0.2.0] - 2026-09-22
 
 ### New Features

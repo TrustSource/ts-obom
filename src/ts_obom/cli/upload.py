@@ -23,7 +23,7 @@ from pathlib import Path
 from . import cli, msg
 from .. import __version__
 from ..api import TrustSourceAPI
-from ..cyclonedx import BOM_TYPE_PROPERTY, BOM_TYPE_VALUE
+from ..cyclonedx import BOM_TYPE_PROPERTY, BOM_TYPE_VALUE, PROPERTY_PREFIX
 
 
 @cli.command('upload', help='Transfers a CycloneDX OBOM to the TrustSource API')
@@ -51,8 +51,21 @@ def upload_obom(path: Path,
     params['toolVersion'] = __version__
 
     scope = 'module' if any(kwargs.values()) else 'project'
+    # Read back out of the document rather than taken as an option: the document
+    # is where the deployment name lives, and the platform reads it from there
+    # too. An option here could contradict it.
+    properties = {p.get('name'): p.get('value')
+                  for p in (document.get('metadata') or {}).get('properties') or []
+                  if isinstance(p, dict)}
+    deployment = properties.get(f'{PROPERTY_PREFIX}:deployment')
+    where = f'{scope} scope' + (f", deployment '{deployment}'" if deployment else '')
     msg.info(f'Uploading the OBOM ({len(document.get("components") or [])} components, '
-             f'{scope} scope)...')
+             f'{where})...')
+
+    if properties.get(f'{PROPERTY_PREFIX}:parameterSource') == 'defaults' and deployment:
+        msg.warn(f"This document names deployment '{deployment}' but was scanned with "
+                 'the templates\' own defaults, so it does not describe that '
+                 "deployment's actual values.")
 
     api = TrustSourceAPI(base_url, api_key)
 

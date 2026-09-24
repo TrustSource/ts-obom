@@ -160,6 +160,14 @@ def _set_metadata(bom: t.Any, scan: 'ObomScan') -> None:
         bom.metadata.properties.add(_property(f'{PROPERTY_PREFIX}:tag', scan.tag))
     if scan.branch:
         bom.metadata.properties.add(_property(f'{PROPERTY_PREFIX}:branch', scan.branch))
+    if scan.deployment:
+        bom.metadata.properties.add(
+            _property(f'{PROPERTY_PREFIX}:deployment', scan.deployment))
+    # Always written, never omitted: a reader comparing two documents has to be
+    # able to tell "scanned with this deployment's parameters" from "scanned
+    # with whatever the templates default to". Absence would be ambiguous.
+    bom.metadata.properties.add(
+        _property(f'{PROPERTY_PREFIX}:parameterSource', scan.parameterSource))
 
     bom.metadata.tools.add(
         Tool(vendor='EACG', name='ts-obom', version=__version__))  # pyright: ignore[reportCallIssue]
@@ -284,15 +292,33 @@ def build_bom(scan: 'ObomScan') -> t.Any:
     return bom
 
 
+#: What CycloneDX itself calls an Operations BOM. `trustsource:bomType` is the
+#: marker the platform requires; this is the standard-native way to say the same
+#: thing, and a CycloneDX consumer that knows nothing about TrustSource can read
+#: it. Declared as data because the pinned library cannot model it -- see below.
+OPERATIONS_LIFECYCLE = [{'phase': 'operations'}]
+
+
 def to_json(scan: 'ObomScan') -> str:
-    """The BOM as a CycloneDX JSON string."""
+    """The BOM as a CycloneDX JSON string.
+
+    ``metadata.lifecycles`` is inserted after serialisation rather than set on
+    the model: it exists in the CycloneDX schema from 1.5 on, but not in
+    cyclonedx-python-lib 7.x, and that major version is fixed by the vendored
+    checkov exporter (checkov pins the library below 8.0). Writing the two
+    fields we need into the emitted document is contained and reversible; moving
+    the pin to get one metadata field is not.
+    """
     obom.require_checkov()
     from checkov.common.output.cyclonedx_consts import DEFAULT_CYCLONE_SCHEMA_VERSION
     from cyclonedx.output import make_outputter
     from cyclonedx.schema import OutputFormat
 
-    return make_outputter(
+    document = json.loads(make_outputter(
         bom=build_bom(scan),
         output_format=OutputFormat.JSON,
         schema_version=DEFAULT_CYCLONE_SCHEMA_VERSION,
-    ).output_as_string(indent=2)
+    ).output_as_string())
+
+    document.setdefault('metadata', {})['lifecycles'] = OPERATIONS_LIFECYCLE
+    return json.dumps(document, indent=2)

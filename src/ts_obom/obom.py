@@ -563,7 +563,13 @@ def _extract_tf_attachment(
     )
 
 
-def extract_terraform(source_dir: str) -> ObomResult:
+def extract_terraform(source_dir: str, var_file: t.Optional[str] = None) -> ObomResult:
+    """``var_file`` is a ``.tfvars`` file whose values are applied on top of
+    the variable defaults, the same way ``terraform -var-file`` would. Without
+    it the graph is built from the defaults plus whatever Terraform loads
+    automatically (``terraform.tfvars``, ``*.auto.tfvars``, ``TF_VAR_*``) --
+    which is a concrete environment's values only by accident. See
+    ``parameterSource`` in the result document."""
     require_checkov()
     from checkov.terraform.graph_manager import TerraformGraphManager
     from checkov.common.graph.db_connectors.networkx.networkx_db_connector import (
@@ -571,7 +577,11 @@ def extract_terraform(source_dir: str) -> ObomResult:
     )
 
     graph_manager = TerraformGraphManager(db_connector=NetworkxConnector())
-    local_graph, _ = graph_manager.build_graph_from_source_directory(source_dir)
+    local_graph, _ = graph_manager.build_graph_from_source_directory(
+        # str(), not the Path the CLI hands over: the parser stores the entry
+        # as a block path and later reads checkov's own path attributes off it,
+        # which a PosixPath does not have.
+        source_dir, vars_files=[str(var_file)] if var_file else None)
     by_origin, by_dest = _index_edges(local_graph)
 
     result = ObomResult(

@@ -14,6 +14,7 @@ A CycloneDX 1.6 document, one per scanned directory. This is the only format the
   "version": 1,
   "metadata": {
     "timestamp": "2026-09-22T08:00:00+00:00",
+    "lifecycles": [{"phase": "operations"}],
     "component": {"bom-ref": "obom:backend", "name": "backend", "type": "application"},
     "properties": [
       {"name": "trustsource:bomType", "value": "obom"},
@@ -21,10 +22,12 @@ A CycloneDX 1.6 document, one per scanned directory. This is the only format the
       {"name": "trustsource:obom:frontends", "value": "cloudformation,terraform"},
       {"name": "trustsource:obom:tag", "value": "v2.4.17"},
       {"name": "trustsource:obom:branch", "value": "main"},
+      {"name": "trustsource:obom:deployment", "value": "PRD"},
+      {"name": "trustsource:obom:parameterSource", "value": "terraform=params4PRD.tfvars"},
       {"name": "trustsource:obom:unresolved", "value": "{\"detail\": \"...\", \"principal\": \"aws_lambda_function.worker\", \"reason\": \"aws-managed-policy\"}"}
     ],
     "tools": [
-      {"vendor": "EACG", "name": "ts-obom", "version": "0.2.0"},
+      {"vendor": "EACG", "name": "ts-obom", "version": "0.3.0"},
       {"vendor": "bridgecrew", "name": "checkov", "version": "3.3.15+ts-obom.vendored"}
     ]
   },
@@ -48,6 +51,8 @@ A CycloneDX 1.6 document, one per scanned directory. This is the only format the
   ]
 }
 ```
+
+`metadata.lifecycles` declares `phase: operations` -- CycloneDX's own way of saying this is an Operations BOM, next to the TrustSource marker a platform consumer looks for.
 
 ### Components
 
@@ -78,6 +83,8 @@ Everything ts-obom adds is namespaced `trustsource:obom:*`, so it is distinguish
 | `trustsource:obom:source` | `metadata` | The absolute path that was scanned |
 | `trustsource:obom:frontends` | `metadata` | The front-ends active for this scan |
 | `trustsource:obom:tag`, `:branch` | `metadata` | Values of `--tag` / `--branch`, omitted when not given |
+| `trustsource:obom:deployment` | `metadata` | Which deployment this document describes -- an environment or a customer setup. Value of `--deployment`, omitted when not given |
+| `trustsource:obom:parameterSource` | `metadata` | Where the parameter values came from. **Never omitted**: `defaults`, or `<front-end>=<file>` per active front-end. Two documents that both say `defaults` are not comparable, however they are named -- see [Usage](usage.md#deployments) |
 | `trustsource:obom:unresolved` | `metadata` | One entry per grant the scanner recognised but could not expand, as JSON |
 | `trustsource:obom:resourceType` | component | The IaC resource type, unmapped and as written |
 | `trustsource:obom:frontend` | component | Which front-end found it |
@@ -101,9 +108,11 @@ A JSON array with one document per scanned directory. Not accepted by the API --
     "source": "/work/orderdesk/backend",
     "tag": "v2.4.17",
     "branch": "main",
+    "deployment": "PRD",
+    "parameterSource": "terraform=params4PRD.tfvars",
     "tool": {
       "name": "ts-obom",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "frontends": ["cloudformation", "terraform"],
       "generatedAt": "2026-09-22T12:00:00+00:00"
     },
@@ -147,6 +156,8 @@ The header mirrors the header of a ts-scan dependency scan so that both results 
 | `moduleId` | `obom:<module>`. A local label, **not** a TrustSource module identifier -- do not pass it to the API as `moduleIdentifier`; that would file the OBOM under a module of its own, next to the one the SBOM lands in. The upload names the scope explicitly with `--module-name` |
 | `source` | Absolute path that was scanned |
 | `tag`, `branch` | Values of `--tag` / `--branch`, omitted when not given |
+| `deployment` | Value of `--deployment`, omitted when not given |
+| `parameterSource` | Where the parameter values came from; never omitted. Same meaning as the CycloneDX property above |
 | `tool.*` | Producer, the active front-ends and a UTC timestamp |
 
 ### Resources

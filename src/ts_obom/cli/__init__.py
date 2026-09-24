@@ -93,9 +93,17 @@ def _load_project_config(path: Path) -> dict:
 
 
 def frontend_options(f):
-    """Adds ``--<frontend>:ignore`` flags, following ts-scan's
+    """Adds the ``--<frontend>:<option>`` switches, following ts-scan's
     ``--<package manager>:<option>`` convention."""
     from .. import FRONTENDS
+
+    # Applies the values on top of the variable defaults, as `terraform
+    # -var-file` would. CloudFormation has no counterpart yet: checkov's parser
+    # takes no external parameter file, so a CFN scan always uses the template
+    # defaults -- which the result records as parameterSource=defaults.
+    f = click.option('--terraform:var-file', 'terraform_var_file',
+                     type=click.Path(exists=True, dir_okay=False, path_type=Path),
+                     help='Applies a .tfvars file on top of the variable defaults')(f)
 
     for name in FRONTENDS:
         f = click.option(f'--{name}:ignore', f'{name}_ignore',
