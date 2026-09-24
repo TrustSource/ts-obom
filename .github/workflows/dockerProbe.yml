@@ -16,6 +16,7 @@ jobs:
         env:
           DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKER_PAT: ${{ secrets.DOCKER_ACCESS }}
+          DOCKER_PAT_ORG: ${{ secrets.FRED4TS2DH }}
         run: |
           set -euo pipefail
 
@@ -23,10 +24,15 @@ jobs:
           if [ -z "${DOCKER_PAT}" ]; then echo "DOCKER_ACCESS is empty"; exit 1; fi
           echo "username secret length: ${#DOCKER_USER}, token secret length: ${#DOCKER_PAT}"
 
-          for repo in trustsource/ts-obom trustsource/ts-scan; do
+          for creds in "DOCKER_ACCESS:${DOCKER_PAT}" "FRED4TS2DH:${DOCKER_PAT_ORG}"; do
+           label="${creds%%:*}"
+           pat="${creds#*:}"
+           if [ -z "$pat" ]; then echo; echo "### ${label}: secret not available here"; continue; fi
+           echo; echo "### token ${label}"
+           for repo in trustsource/ts-obom trustsource/ts-scan; do
             echo
             echo "=== ${repo} ==="
-            jwt=$(curl -s -u "${DOCKER_USER}:${DOCKER_PAT}" \
+            jwt=$(curl -s -u "${DOCKER_USER}:${pat}" \
               "https://auth.docker.io/token?service=registry.docker.io&scope=repository:${repo}:pull,push" \
               | python3 -c 'import json,sys; print(json.load(sys.stdin).get("token",""))')
 
@@ -44,4 +50,5 @@ jobs:
           for entry in access:
               print('  granted actions  :', entry.get('name'), '->', entry.get('actions'))
           PY
+           done
           done
