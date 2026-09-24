@@ -8,12 +8,21 @@ It is the infrastructure counterpart to [ts-scan](https://trustsource.github.io/
 
 ***ts-obom*** works entirely offline on CloudFormation, AWS SAM, Terraform and OpenTofu sources. It needs no cloud credentials, no Terraform init and no Checkov installation.
 
-To get started:
+This site is meant to get you to a useful result quickly. To jump straight in:
 
-- [Architecture and supported front-ends](/ts-obom/architecture)
+- [Architecture Overview & supported front-ends](/ts-obom/architecture)
 - [Installation](/ts-obom/setup)
-- [Usage](/ts-obom/usage) and the [result format](/ts-obom/format)
-- [Operating inside a container](/ts-obom/container)
+- Capabilities
+    - See the [Usage](/ts-obom/usage) page for general guidance
+    - [Describing deployments](/ts-obom/deployments) — one document per environment or customer setup
+    - [Result format](/ts-obom/format) — what the CycloneDX and the native output contain
+- Operations examples
+    - [One OBOM per environment, from the pipeline](/ts-obom/uc01-perEnvironment)
+    - [Transferring results to TrustSource](/ts-obom/upload)
+    - [Operating inside a container](/ts-obom/container)
+- Contributing
+    - [Adding features](/ts-obom/adding) and the [development guidelines](/ts-obom/guidelines)
+    - [Roadmap](/ts-obom/roadmap)
 
 ## Getting Support
 

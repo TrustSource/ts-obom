@@ -67,11 +67,19 @@ The `-f <output format>` option controls the output format and can be:
 
 ### Options
 
+Which sources are read:
+
 * `--cloudformation:ignore` - Skip CloudFormation and SAM templates
 * `--terraform:ignore` - Skip Terraform and OpenTofu sources
-* `--deployment <NAME>` - Names the deployment this OBOM describes (`DEV`, `PRD`, `kunde1`), so several deployments of one project can be held side by side
-* `--cloudformation:parameters <FILE>` - Applies a CloudFormation parameter file on top of the template defaults
-* `--terraform:var-file <FILE>` - Applies a `.tfvars` file on top of the variable defaults
+
+Which *deployment* the result describes — see [Deployments](#deployments) below:
+
+* `--deployment <NAME>` - Names the deployment: an environment (`DEV`, `PRD`) or a customer setup (`kunde1`)
+* `--cloudformation:parameters <FILE>` - Applies a CloudFormation parameter file on top of the templates' declared defaults. Reads `[{"ParameterKey": ..., "ParameterValue": ...}]` — the format `sam deploy --parameter-overrides` is fed from — or a flat name/value mapping
+* `--terraform:var-file <FILE>` - Applies a `.tfvars` file on top of the variable defaults, as `terraform -var-file` would
+
+Recorded alongside the result:
+
 * `--tag <TAG>` - Stores the SCM tag `<TAG>` in the result
 * `--branch <BRANCH>` - Stores the SCM branch `<BRANCH>` in the result
 * `--verbose` - Enables verbose mode
@@ -81,6 +89,27 @@ The full list of options can be printed using:
 ```shell
 ts-obom scan --help
 ```
+
+### Deployments
+
+One project is usually deployed several times, and the interesting questions are comparative: what does production have that development does not, what does one customer setup grant that another does not.
+
+```shell
+ts-obom scan -f cyclonedx --deployment PRD \
+  --cloudformation:parameters params4PRD.json -o obom-prd.cdx.json .
+```
+
+**A name on its own is not enough.** The scan resolves `Ref`, `!Sub` and Terraform variables against the **defaults declared in the sources**. In the usual pattern — one template, one parameter file per environment — the entire difference between two deployments lives in those parameter files, so without them two scans of the same sources produce identical documents. Naming one `DEV` and the other `PRD` would then show no difference, which says nothing about the deployments and everything about how the documents were made.
+
+Every result therefore records where its parameter values came from, and this field is never omitted:
+
+| `parameterSource` | Meaning |
+|-------------------|---------|
+| `defaults` | Nothing was supplied. Two documents that both say this are **not** comparable, however they are named |
+| `cloudformation=params4PRD.json` | Values came from that file |
+| `cloudformation=defaults,terraform=params4PRD.tfvars` | Half parameterised — Terraform got values, CloudFormation did not |
+
+Naming a deployment without supplying values is allowed, and warned about — once when the scan produces such a document, and again before it is uploaded. A value supplied for a parameter that no scanned template declares is reported under `unresolved` as `unused-parameter`, rather than silently doing nothing.
 
 ### Example
 
@@ -98,7 +127,9 @@ produces a document like
     "module": "backend",
     "moduleId": "obom:backend",
     "source": "/work/orderdesk/backend",
-    "tool": { "name": "ts-obom", "version": "0.2.0", "frontends": ["cloudformation", "terraform"], "generatedAt": "2026-09-22T12:00:00+00:00" },
+    "deployment": "PRD",
+    "parameterSource": "cloudformation=params4PRD.json",
+    "tool": { "name": "ts-obom", "version": "0.4.0", "frontends": ["cloudformation", "terraform"], "generatedAt": "2026-09-22T12:00:00+00:00" },
     "edges": [
       {
         "principal": "AWS::Serverless::Function.OrderApiFunction",
@@ -122,12 +153,6 @@ The platform stores OBOMs as CycloneDX, so a transfer is a scan in that format f
 ```shell
 ts-obom scan -f cyclonedx -o obom.cdx.json .
 ts-obom upload --api-key "$TS_API_KEY" --project-name Orderdesk obom.cdx.json
-```
-
-One project is usually deployed several times. `--deployment` names which deployment a document describes, and `parameterSource` records where its parameter values came from — a name alone is not enough, because the scan otherwise resolves variables against the sources' own defaults and two deployments yield identical documents:
-
-```shell
-ts-obom scan -f cyclonedx --deployment PRD --cloudformation:parameters params4PRD.json -o obom-prd.cdx.json .
 ```
 
 Scan the **project root** and upload at **project scope**: the front-ends recurse, so one run covers the whole project, and that is where an OBOM belongs. A module is something that produces a deployment artefact, which infrastructure does not divide into -- a queue or a table belongs to no artefact. `--module-name` exists for the case where the scanned sources really are one module's own infrastructure. The `obom` feature has to be enabled for the company; the key travels as the `x-api-key` header, and `--base-url` carries the API version (default `https://api.trustsource.io/v2`).

@@ -4,7 +4,7 @@
 
 ## CycloneDX (`-f cyclonedx`)
 
-A CycloneDX 1.6 document, one per scanned directory. This is the only format the TrustSource OBOM API accepts, and what [`ts-obom upload`](usage.md#upload) sends.
+A CycloneDX 1.6 document, one per scanned directory. This is the only format the TrustSource OBOM API accepts, and what [`ts-obom upload`](upload.md) sends.
 
 ```json
 {
@@ -84,7 +84,7 @@ Everything ts-obom adds is namespaced `trustsource:obom:*`, so it is distinguish
 | `trustsource:obom:frontends` | `metadata` | The front-ends active for this scan |
 | `trustsource:obom:tag`, `:branch` | `metadata` | Values of `--tag` / `--branch`, omitted when not given |
 | `trustsource:obom:deployment` | `metadata` | Which deployment this document describes -- an environment or a customer setup. Value of `--deployment`, omitted when not given |
-| `trustsource:obom:parameterSource` | `metadata` | Where the parameter values came from. **Never omitted**: `defaults`, or `<front-end>=<file>` per active front-end. Two documents that both say `defaults` are not comparable, however they are named -- see [Usage](usage.md#deployments) |
+| `trustsource:obom:parameterSource` | `metadata` | Where the parameter values came from. **Never omitted**: `defaults`, or `<front-end>=<file>` per active front-end. Two documents that both say `defaults` are not comparable, however they are named -- see [Deployments and parameters](deployments.md) |
 | `trustsource:obom:unresolved` | `metadata` | One entry per grant the scanner recognised but could not expand, as JSON |
 | `trustsource:obom:resourceType` | component | The IaC resource type, unmapped and as written |
 | `trustsource:obom:frontend` | component | Which front-end found it |

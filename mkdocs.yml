@@ -16,14 +16,24 @@ nav:
   - Overview:
     - 'index.md'
     - Architecture: 'architecture.md'
+    - Adding Features: 'adding.md'
+    - Coding Guidelines: 'guidelines.md'
   - Installation: 'setup.md'
   - Usage:
     - 'usage.md'
-    - Result format: 'format.md'
-    - Operating inside a container: 'container.md'
+    - Scan for:
+      - deployments: 'deployments.md'
+    - Results:
+      - result format: 'format.md'
+      - transferring to TrustSource: 'upload.md'
+    - Operate:
+      - operating inside a container: 'container.md'
+    - Use Cases:
+      - One OBOM per environment: 'uc01-perEnvironment.md'
   - Security: 'security.md'
   - About:
     - 'about.md'
+    - Roadmap: 'roadmap.md'
     - Changelog: 'CHANGELOG.md'
 
 

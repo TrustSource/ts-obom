@@ -22,6 +22,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
       for a whole scan (`cloudformation=params4PRD.json,terraform=params4PRD.tfvars`) and two
       deployments of one project are genuinely comparable
 
+### Documentation
+    * The documentation site follows ts-scan's structure: an Overview section with the
+      architecture, a contribution guide and the development guidelines, task oriented Usage
+      pages, a use case, and a roadmap. New pages for deployments, for transferring results and
+      for adding features; `usage.md` keeps the general guidance and links on from there
+    * The README groups the scan options by what they decide and explains `--deployment` together
+      with the parameter flags that give it meaning, rather than listing them apart
+
 ## [0.3.0] - 2026-09-24
 
 ### New Features
