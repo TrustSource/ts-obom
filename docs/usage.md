@@ -38,9 +38,34 @@ Front-end specific options are prefixed with the front-end name, like package ma
 
 General options:
 
+* `--terraform:var-file <FILE>` - Applies a `.tfvars` file on top of the variable defaults, as `terraform -var-file` would
+* `--deployment <NAME>` - Names the deployment this OBOM describes: an environment (`DEV`, `PRD`) or a customer setup (`kunde1`). See [Deployments](#deployments) below
 * `--tag <TAG>` - Stores the SCM tag `<TAG>` in the result
 * `--branch <BRANCH>` - Stores the SCM branch `<BRANCH>` in the result
 * `--verbose` - Enables verbose mode
+
+### Deployments
+
+One project is usually deployed several times -- `DEV` and `PRD`, or one setup per customer. `--deployment` names which of them a document describes, so the platform can hold them side by side and a reader can ask what production has that development does not.
+
+```shell
+ts-obom scan -f cyclonedx --deployment PRD \
+  --terraform:var-file params4PRD.tfvars -o obom-prd.cdx.json .
+```
+
+**A name alone is not enough.** The scan resolves `Ref`, `!Sub` and Terraform variables against the **defaults declared in the sources**. In the common pattern -- one template, one parameter file per environment -- the entire difference between two deployments lives in those parameter files, and without them two scans of the same sources produce identical documents. Naming one `DEV` and the other `PRD` would then show "no difference" where in truth nothing was compared.
+
+Every result therefore records where its parameter values came from, in `parameterSource`:
+
+| Value | Meaning |
+|-------|---------|
+| `defaults` | No parameter values were supplied to any front-end. Two documents that both say this are **not** comparable, however they are named |
+| `terraform=params4PRD.tfvars` | Terraform values came from that file |
+| `cloudformation=defaults,terraform=params4PRD.tfvars` | Half parameterised -- Terraform got values, CloudFormation did not |
+
+Naming a deployment without supplying parameter values is allowed and warned about, at scan time and again at upload.
+
+CloudFormation cannot take parameter values yet: the parser accepts no external parameter file, so a CloudFormation scan always records `defaults`. Terraform and OpenTofu take them through `--terraform:var-file`.
 
 The full list of options can be printed using:
 

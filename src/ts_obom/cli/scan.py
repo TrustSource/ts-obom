@@ -25,6 +25,10 @@ from ..obom import CheckovNotInstalledError
               help="Project's tag in the VCS")
 @click.option('--branch', required=False, type=str,
               help="Project's branch in the VCS")
+@click.option('--deployment', required=False, type=str,
+              help='Names the deployment this OBOM describes, for example an '
+                   'environment (DEV, PRD) or a customer setup (kunde1). Only '
+                   'meaningful together with that deployment\'s parameter values')
 @click.argument('sources',
                 type=click.Path(exists=True, path_type=Path),
                 nargs=-1)
@@ -34,13 +38,15 @@ def scan_obom(sources: t.List[Path],
               verbose: bool,
               tag: str,
               branch: str,
+              deployment: str,
               **kwargs):
     if not sources:
         msg.fail('No sources given. Pass one or more directories containing IaC sources.')
         exit(2)
 
     try:
-        scans = list(do_scan(sources, verbose=verbose, tag=tag, branch=branch, **kwargs))
+        scans = list(do_scan(sources, verbose=verbose, tag=tag, branch=branch,
+                             deployment=deployment, **kwargs))
     except CheckovNotInstalledError as err:
         msg.fail(str(err))
         exit(2)
