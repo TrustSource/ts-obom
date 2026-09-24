@@ -115,6 +115,7 @@ class ObomScan:
 #: name the extractor expects. A front-end that is absent here has no way to
 #: take external parameter values yet and always scans with the defaults.
 FRONTEND_PARAMETER_OPTIONS: t.Dict[str, str] = {
+    'cloudformation': 'parameters',
     'terraform': 'var_file',
 }
 

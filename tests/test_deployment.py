@@ -33,11 +33,51 @@ resource "aws_iam_role_policy" "reports_read" {
 '''
 
 
+CFN_TEMPLATE = """
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  BucketName:
+    Type: String
+    Default: orderdesk-dev-reports
+Resources:
+  ReportRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: {Service: lambda.amazonaws.com}
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: read-reports
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub 'arn:aws:s3:::${BucketName}/*'
+"""
+
+
+@pytest.fixture
+def cfn_sources(tmp_path):
+    """A template whose bucket name comes from a parameter, plus one parameter
+    file per deployment -- the pattern the TrustSource repositories deploy with:
+    one template, one parameter file per environment."""
+    sources = tmp_path / 'cfn-infra'
+    sources.mkdir()
+    (sources / 'template.yaml').write_text(CFN_TEMPLATE)
+    (sources / 'params4PRD.json').write_text(json.dumps([
+        {'ParameterKey': 'BucketName', 'ParameterValue': 'orderdesk-prod-reports'},
+    ]))
+    (sources / 'flat.json').write_text(json.dumps({'BucketName': 'orderdesk-flat'}))
+    return sources
+
+
 @pytest.fixture
 def tf_sources(tmp_path):
     """Terraform sources whose bucket name comes from a variable, plus a
     .tfvars file holding another environment's value for it."""
-    sources = tmp_path / 'infra'
+    sources = tmp_path / 'tf-infra'
     sources.mkdir()
     (sources / 'main.tf').write_text(TFVARS_MAIN)
     (sources / 'params4PRD.tfvars').write_text('bucket = "orderdesk-prod-reports"\n')
@@ -129,3 +169,71 @@ def test_document_declares_the_operations_lifecycle(tmp_path):
     result = _scan(tmp_path, str(FIXTURES / 'cloudformation'), fmt='cyclonedx')
     assert _document(result, fmt='cyclonedx')['metadata']['lifecycles'] == [
         {'phase': 'operations'}]
+
+
+def test_cloudformation_parameters_replace_the_template_defaults(tmp_path, cfn_sources):
+    """The pattern this exists for: same template, one parameter file per
+    environment. Without the file the scan reports the template's default,
+    which is neither deployment's value."""
+    without = _document(_scan(tmp_path, '--terraform:ignore', str(cfn_sources)))
+    with_params = _document(_scan(tmp_path, '--terraform:ignore',
+                                  '--cloudformation:parameters',
+                                  str(cfn_sources / 'params4PRD.json'), str(cfn_sources)))
+
+    assert without['edges'][0]['resource'] == 'arn:aws:s3:::orderdesk-dev-reports/*'
+    assert with_params['edges'][0]['resource'] == 'arn:aws:s3:::orderdesk-prod-reports/*'
+    assert with_params['parameterSource'] == 'cloudformation=params4PRD.json'
+
+
+def test_a_flat_parameter_mapping_is_accepted_too(tmp_path, cfn_sources):
+    document = _document(_scan(tmp_path, '--terraform:ignore',
+                               '--cloudformation:parameters', str(cfn_sources / 'flat.json'),
+                               str(cfn_sources)))
+    assert document['edges'][0]['resource'] == 'arn:aws:s3:::orderdesk-flat/*'
+
+
+def test_a_value_for_an_undeclared_parameter_is_reported(tmp_path, cfn_sources):
+    """Usually a typo or the wrong file. Silently ignoring it would let
+    parameterSource claim more than the scan actually applied."""
+    params = cfn_sources / 'typo.json'
+    params.write_text(json.dumps([
+        {'ParameterKey': 'BucketName', 'ParameterValue': 'orderdesk-prod-reports'},
+        {'ParameterKey': 'BuckettName', 'ParameterValue': 'typo'},
+    ]))
+
+    document = _document(_scan(tmp_path, '--terraform:ignore',
+                               '--cloudformation:parameters', str(params), str(cfn_sources)))
+
+    unused = [u for u in document['unresolved'] if u['reason'] == 'unused-parameter']
+    assert len(unused) == 1 and 'BuckettName' in unused[0]['detail']
+    # The one that does exist was still applied.
+    assert document['edges'][0]['resource'] == 'arn:aws:s3:::orderdesk-prod-reports/*'
+
+
+def test_parameters_not_named_in_the_file_keep_their_default(tmp_path, cfn_sources):
+    """As on a real deployment: --parameter-overrides only overrides what it
+    names."""
+    params = cfn_sources / 'empty.json'
+    params.write_text(json.dumps([]))
+
+    document = _document(_scan(tmp_path, '--terraform:ignore',
+                               '--cloudformation:parameters', str(params), str(cfn_sources)))
+    assert document['edges'][0]['resource'] == 'arn:aws:s3:::orderdesk-dev-reports/*'
+
+
+def test_both_front_ends_parameterised_is_a_full_source(tmp_path, cfn_sources, tf_sources):
+    document = _document(_scan(tmp_path,
+                               '--cloudformation:parameters',
+                               str(cfn_sources / 'params4PRD.json'),
+                               '--terraform:var-file', str(tf_sources / 'params4PRD.tfvars'),
+                               str(cfn_sources)))
+    assert document['parameterSource'] == (
+        'cloudformation=params4PRD.json,terraform=params4PRD.tfvars')
+
+
+def test_naming_a_deployment_with_parameters_does_not_warn(tmp_path, cfn_sources):
+    result = _scan(tmp_path, '--terraform:ignore', '--deployment', 'PRD',
+                   '--cloudformation:parameters', str(cfn_sources / 'params4PRD.json'),
+                   str(cfn_sources))
+    assert result.exit_code == 0
+    assert 'no parameter values were supplied' not in result.output

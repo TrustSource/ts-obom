@@ -191,7 +191,7 @@ Grants the scanner recognised but could not expand without external knowledge.
 | Field | Meaning |
 |-------|---------|
 | `principal` | The identity concerned |
-| `reason` | Short category, for example a managed policy attachment or a SAM policy template the scanner does not know yet |
+| `reason` | Short category, for example a managed policy attachment, a SAM policy template the scanner does not know yet, or `unused-parameter` for a supplied parameter value no template declares |
 | `detail` | The reference that could not be expanded |
 
 Unresolved entries are not errors. They mark the places where a reviewer has to look up the policy by hand, and they are the backlog for extending the scanner.

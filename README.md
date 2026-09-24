@@ -70,6 +70,7 @@ The `-f <output format>` option controls the output format and can be:
 * `--cloudformation:ignore` - Skip CloudFormation and SAM templates
 * `--terraform:ignore` - Skip Terraform and OpenTofu sources
 * `--deployment <NAME>` - Names the deployment this OBOM describes (`DEV`, `PRD`, `kunde1`), so several deployments of one project can be held side by side
+* `--cloudformation:parameters <FILE>` - Applies a CloudFormation parameter file on top of the template defaults
 * `--terraform:var-file <FILE>` - Applies a `.tfvars` file on top of the variable defaults
 * `--tag <TAG>` - Stores the SCM tag `<TAG>` in the result
 * `--branch <BRANCH>` - Stores the SCM branch `<BRANCH>` in the result
@@ -126,7 +127,7 @@ ts-obom upload --api-key "$TS_API_KEY" --project-name Orderdesk obom.cdx.json
 One project is usually deployed several times. `--deployment` names which deployment a document describes, and `parameterSource` records where its parameter values came from — a name alone is not enough, because the scan otherwise resolves variables against the sources' own defaults and two deployments yield identical documents:
 
 ```shell
-ts-obom scan -f cyclonedx --deployment PRD --terraform:var-file params4PRD.tfvars -o obom-prd.cdx.json .
+ts-obom scan -f cyclonedx --deployment PRD --cloudformation:parameters params4PRD.json -o obom-prd.cdx.json .
 ```
 
 Scan the **project root** and upload at **project scope**: the front-ends recurse, so one run covers the whole project, and that is where an OBOM belongs. A module is something that produces a deployment artefact, which infrastructure does not divide into -- a queue or a table belongs to no artefact. `--module-name` exists for the case where the scanned sources really are one module's own infrastructure. The `obom` feature has to be enabled for the company; the key travels as the `x-api-key` header, and `--base-url` carries the API version (default `https://api.trustsource.io/v2`).

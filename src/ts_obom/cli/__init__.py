@@ -97,10 +97,15 @@ def frontend_options(f):
     ``--<package manager>:<option>`` convention."""
     from .. import FRONTENDS
 
-    # Applies the values on top of the variable defaults, as `terraform
-    # -var-file` would. CloudFormation has no counterpart yet: checkov's parser
-    # takes no external parameter file, so a CFN scan always uses the template
-    # defaults -- which the result records as parameterSource=defaults.
+    # Both apply a deployment's own values on top of what the sources declare
+    # as their defaults, which is what makes a named deployment describe that
+    # deployment rather than the templates.
+    f = click.option('--cloudformation:parameters', 'cloudformation_parameters',
+                     type=click.Path(exists=True, dir_okay=False, path_type=Path),
+                     help='Applies a CloudFormation parameter file on top of the '
+                          'template defaults ([{ParameterKey, ParameterValue}] or a '
+                          'name/value mapping)')(f)
+
     f = click.option('--terraform:var-file', 'terraform_var_file',
                      type=click.Path(exists=True, dir_okay=False, path_type=Path),
                      help='Applies a .tfvars file on top of the variable defaults')(f)

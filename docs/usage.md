@@ -38,6 +38,7 @@ Front-end specific options are prefixed with the front-end name, like package ma
 
 General options:
 
+* `--cloudformation:parameters <FILE>` - Applies a CloudFormation parameter file on top of the template defaults
 * `--terraform:var-file <FILE>` - Applies a `.tfvars` file on top of the variable defaults, as `terraform -var-file` would
 * `--deployment <NAME>` - Names the deployment this OBOM describes: an environment (`DEV`, `PRD`) or a customer setup (`kunde1`). See [Deployments](#deployments) below
 * `--tag <TAG>` - Stores the SCM tag `<TAG>` in the result
@@ -50,7 +51,7 @@ One project is usually deployed several times -- `DEV` and `PRD`, or one setup p
 
 ```shell
 ts-obom scan -f cyclonedx --deployment PRD \
-  --terraform:var-file params4PRD.tfvars -o obom-prd.cdx.json .
+  --cloudformation:parameters params4PRD.json -o obom-prd.cdx.json .
 ```
 
 **A name alone is not enough.** The scan resolves `Ref`, `!Sub` and Terraform variables against the **defaults declared in the sources**. In the common pattern -- one template, one parameter file per environment -- the entire difference between two deployments lives in those parameter files, and without them two scans of the same sources produce identical documents. Naming one `DEV` and the other `PRD` would then show "no difference" where in truth nothing was compared.
@@ -60,12 +61,26 @@ Every result therefore records where its parameter values came from, in `paramet
 | Value | Meaning |
 |-------|---------|
 | `defaults` | No parameter values were supplied to any front-end. Two documents that both say this are **not** comparable, however they are named |
-| `terraform=params4PRD.tfvars` | Terraform values came from that file |
+| `cloudformation=params4PRD.json` | CloudFormation values came from that file |
 | `cloudformation=defaults,terraform=params4PRD.tfvars` | Half parameterised -- Terraform got values, CloudFormation did not |
 
 Naming a deployment without supplying parameter values is allowed and warned about, at scan time and again at upload.
 
-CloudFormation cannot take parameter values yet: the parser accepts no external parameter file, so a CloudFormation scan always records `defaults`. Terraform and OpenTofu take them through `--terraform:var-file`.
+### Parameter files
+
+`--cloudformation:parameters` reads the format TrustSource's own deploy scripts use, which is also what `aws cloudformation --parameters` takes:
+
+```json
+[
+  { "ParameterKey": "BucketName", "ParameterValue": "orderdesk-prod-reports" }
+]
+```
+
+A flat `{"BucketName": "orderdesk-prod-reports"}` mapping works as well, with or without a `Parameters` wrapper; which one it is is told from the file, not from a flag. The values replace the templates' declared `Default`s before the graph is built. A parameter the file does not name keeps its template default, exactly as it would on a real deployment.
+
+A value supplied for a parameter **no scanned template declares** -- usually a typo or the wrong file -- is reported under `unresolved` with the reason `unused-parameter`, rather than silently ignored.
+
+`--terraform:var-file` takes a `.tfvars` file and applies it the way `terraform -var-file` does, on top of the variable defaults and the files Terraform loads automatically.
 
 The full list of options can be printed using:
 
