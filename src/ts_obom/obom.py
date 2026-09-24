@@ -403,15 +403,95 @@ def _collect_resources(
     return resources
 
 
-def extract_cloudformation(source_dir: str) -> ObomResult:
+def load_cfn_parameters(path: str) -> t.Dict[str, t.Any]:
+    """Reads a CloudFormation parameter file into {name: value}.
+
+    Accepts the format TrustSource's own deploy scripts use and that
+    ``aws cloudformation --parameters`` takes -- ``[{"ParameterKey": ...,
+    "ParameterValue": ...}]`` -- as well as a flat ``{"name": "value"}``
+    mapping, with or without a ``Parameters`` wrapper around it. Which one it
+    is can be told from the parsed shape, so there is no need for a flag.
+    """
+    import json
+
+    with open(path) as fp:
+        data = json.load(fp)
+
+    if isinstance(data, list):
+        return {
+            entry['ParameterKey']: entry.get('ParameterValue')
+            for entry in data
+            if isinstance(entry, dict) and 'ParameterKey' in entry
+        }
+    if isinstance(data, dict):
+        inner = data.get('Parameters', data)
+        if isinstance(inner, dict):
+            return dict(inner)
+
+    raise ValueError(
+        f'{path} is neither a [{{"ParameterKey", "ParameterValue"}}] list nor a '
+        'mapping of parameter names to values'
+    )
+
+
+def _apply_cfn_parameters(
+    definitions: t.Dict[str, t.Any], values: t.Dict[str, t.Any]
+) -> t.Set[str]:
+    """Overrides each template's parameter ``Default`` with the supplied value.
+
+    Checkov resolves ``Ref`` and ``!Sub`` against the parameter defaults
+    declared in the template, so overriding the defaults before the graph is
+    built is what makes the graph describe one concrete deployment. Parameters
+    the file does not mention keep the template's own default, as they would on
+    a real deployment.
+
+    :return: the parameter names that were actually applied
+    """
+    applied: t.Set[str] = set()
+
+    for definition in definitions.values():
+        if not isinstance(definition, dict):
+            continue
+        parameters = definition.get('Parameters') or {}
+        if not isinstance(parameters, dict):
+            continue
+        for name, spec in parameters.items():
+            if isinstance(spec, dict) and name in values:
+                spec['Default'] = values[name]
+                applied.add(name)
+
+    return applied
+
+
+def extract_cloudformation(
+    source_dir: str, parameters: t.Optional[str] = None
+) -> ObomResult:
+    """``parameters`` is a CloudFormation parameter file whose values replace
+    the templates' declared defaults, so the graph describes one deployment
+    rather than whatever the templates happen to default to. See
+    ``parameterSource`` in the result document."""
     require_checkov()
     from checkov.cloudformation.graph_manager import CloudformationGraphManager
+    from checkov.cloudformation.cfn_utils import get_folder_definitions
     from checkov.common.graph.db_connectors.networkx.networkx_db_connector import (
         NetworkxConnector,
     )
 
     graph_manager = CloudformationGraphManager(db_connector=NetworkxConnector())
-    local_graph, _ = graph_manager.build_graph_from_source_directory(source_dir)
+
+    unused: t.List[str] = []
+    if parameters:
+        # Parse and build in two steps rather than through
+        # build_graph_from_source_directory(), so the parameter values can be
+        # applied in between. The discarded second half of that method only
+        # produces the rendered definitions, which this scan does not use.
+        values = load_cfn_parameters(parameters)
+        definitions, _ = get_folder_definitions(source_dir, None, {})
+        applied = _apply_cfn_parameters(definitions, values)
+        unused = sorted(set(values) - applied)
+        local_graph = graph_manager.build_graph_from_definitions(definitions)
+    else:
+        local_graph, _ = graph_manager.build_graph_from_source_directory(source_dir)
 
     result = ObomResult(
         resources=_collect_resources(
@@ -419,6 +499,19 @@ def extract_cloudformation(source_dir: str) -> ObomResult:
             lambda v: v.attributes.get('resource_type'),
         )
     )
+
+    # A value supplied for a parameter no template declares is worth saying out
+    # loud: it is usually a typo or the wrong file, and it would otherwise make
+    # the document's parameterSource claim more than the scan actually applied.
+    for name in unused:
+        result.unresolved.append(
+            ObomUnresolved(
+                principal=f'parameter {name}',
+                reason='unused-parameter',
+                detail=f'{parameters} supplies a value for {name}, '
+                       'which no scanned template declares',
+            )
+        )
     for vertex in local_graph.vertices:
         resource_type = vertex.attributes.get('resource_type')
         if resource_type == 'AWS::IAM::Role':

@@ -3,6 +3,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-09-24
+
+### New Features
+    * `--cloudformation:parameters <FILE>` applies a CloudFormation parameter file on top of the
+      templates' declared defaults, so a CloudFormation scan describes one concrete deployment
+      instead of whatever the templates default to. Reads TrustSource's own
+      `[{ParameterKey, ParameterValue}]` format -- the one the deploy scripts feed to
+      `sam deploy --parameter-overrides` -- as well as a flat name/value mapping, told apart by
+      the parsed shape rather than by a flag
+    * A value supplied for a parameter that no scanned template declares is reported under
+      `unresolved` with the reason `unused-parameter`, instead of being silently ignored. It is
+      usually a typo or the wrong file, and ignoring it would let `parameterSource` claim more
+      than the scan actually applied
+
+### Improvements
+    * With this, both front-ends can be parameterised, so `parameterSource` can name a real source
+      for a whole scan (`cloudformation=params4PRD.json,terraform=params4PRD.tfvars`) and two
+      deployments of one project are genuinely comparable
+
 ## [0.3.0] - 2026-09-24
 
 ### New Features
